@@ -62,6 +62,14 @@ def build_escalation_payload(
     }
 
 
+def escalation_path_for_payload(payload: Mapping[str, str], fallback_path: str) -> str:
+    trusted_paths = {
+        "studio": "/studio_escalate",
+        "direct": "/escalate",
+    }
+    return trusted_paths.get(payload.get("handoffRoute"), fallback_path)
+
+
 async def post_escalation(service_url: str, token: str, payload: dict[str, str], *, path: str) -> dict:
     url = f"{service_url.rstrip('/')}/{path.lstrip('/')}"
     response = await asyncio.to_thread(
@@ -112,7 +120,10 @@ class HandoffAgent(Agent):
                 os.environ["HANDOFF_SERVICE_URL"],
                 os.environ["HANDOFF_TOKEN"],
                 payload,
-                path=os.environ.get("HANDOFF_ESCALATE_PATH", "/escalate"),
+                path=escalation_path_for_payload(
+                    payload,
+                    os.environ.get("HANDOFF_ESCALATE_PATH", "/escalate"),
+                ),
             )
         except KeyError as error:
             logger.exception("Missing handoff environment variable")

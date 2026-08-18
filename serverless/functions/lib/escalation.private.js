@@ -2,6 +2,12 @@ async function handleEscalation(context, event, callback) {
   const response = jsonResponse();
   const authorization = event.request?.headers?.authorization || event.request?.headers?.Authorization;
 
+  if (isBlank(context.HANDOFF_TOKEN)) {
+    response.setStatusCode(500);
+    response.setBody({ error: "missing_handoff_token" });
+    return callback(null, response);
+  }
+
   if (authorization !== `Bearer ${context.HANDOFF_TOKEN}`) {
     response.setStatusCode(401);
     response.setBody({ error: "unauthorized" });
@@ -129,6 +135,10 @@ function parsePayload(event) {
 
 function isWorkflowSid(value) {
   return typeof value === "string" && /^WW[a-fA-F0-9]{32}$/.test(value);
+}
+
+function isBlank(value) {
+  return typeof value !== "string" || value.trim() === "";
 }
 
 module.exports = {

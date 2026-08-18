@@ -147,6 +147,17 @@ test("handleEscalation rejects invalid bearer token", async () => {
   assert.deepEqual(result.body, { error: "unauthorized" });
 });
 
+test("handleEscalation rejects Bearer undefined when handoff token is missing", async () => {
+  const context = escalationContext({ HANDOFF_TOKEN: "" });
+  const result = await invokeHandler(handleEscalation, context, {
+    request: { headers: { authorization: "Bearer undefined" } },
+  });
+
+  assert.equal(result.statusCode, 500);
+  assert.deepEqual(result.body, { error: "missing_handoff_token" });
+  assert.equal(context.updates.length, 0);
+});
+
 test("handleEscalation updates parent call with enqueue TwiML", async () => {
   const context = escalationContext();
   const result = await invokeHandler(handleEscalation, context, {
@@ -225,4 +236,15 @@ test("handleStudioEscalation redirects parent call to Studio return", async () =
   assert.equal(context.updates[0].callSid, "CA11111111111111111111111111111111");
   assert.match(context.updates[0].args.twiml, /<Redirect method="POST">/);
   assert.match(context.updates[0].args.twiml, /FlowEvent=return/);
+});
+
+test("handleStudioEscalation rejects Bearer undefined when handoff token is missing", async () => {
+  const context = studioContext({ HANDOFF_TOKEN: "   " });
+  const result = await invokeHandler(handleStudioEscalation, context, {
+    request: { headers: { authorization: "Bearer undefined" } },
+  });
+
+  assert.equal(result.statusCode, 500);
+  assert.deepEqual(result.body, { error: "missing_handoff_token" });
+  assert.equal(context.updates.length, 0);
 });

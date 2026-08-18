@@ -69,6 +69,8 @@ Import `studio/livekit-flex-handoff-flow.example.json` or recreate the same flow
 Incoming Call -> TwiML Redirect /studio_voice -> Send to Flex
 ```
 
+Replace the sample `WW...` Workflow SID and `TC...` Task Channel SID in the imported flow with the SIDs from your Flex configuration.
+
 Set the TwiML Redirect URL to your deployed `/studio_voice` Function.
 
 Set `STUDIO_FLOW_WEBHOOK_URL` to the published Studio Flow webhook URL and redeploy Functions.
@@ -105,8 +107,11 @@ The Python sample is in `agent/agent.py`. It looks for a LiveKit Connector parti
 - `handoffId`
 - `callDirection`
 - `customerPhone`
+- `handoffRoute`
 
 It does not look for SIP participant attributes.
+
+`buildStreamTwiml` returns a serialized TwiML string for the connector WebSocket URL.
 
 ## Test
 
