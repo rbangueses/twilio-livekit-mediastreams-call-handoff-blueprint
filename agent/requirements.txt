@@ -1,0 +1,3 @@
+livekit-agents[deepgram,openai,cartesia,silero]~=1.2
+python-dotenv~=1.0
+requests~=2.32
