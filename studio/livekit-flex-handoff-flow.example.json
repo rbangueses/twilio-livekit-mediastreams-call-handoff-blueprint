@@ -35,7 +35,7 @@
       "properties": {
         "url": "https://your-functions-service-1234.twil.io/studio_voice",
         "method": "POST",
-        "timeout": 14400,
+        "timeout": "14400",
         "offset": {
           "x": 240,
           "y": 120
