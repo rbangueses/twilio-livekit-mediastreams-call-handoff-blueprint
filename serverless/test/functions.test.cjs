@@ -7,6 +7,11 @@ const {
   buildConnectorRequest,
   buildStreamTwiml,
 } = require("../functions/lib/livekit-connector.private");
+const {
+  handleEscalation,
+  normalizedSummary,
+  taskAttributesForPayload,
+} = require("../functions/lib/escalation.private");
 
 function baseContext(overrides = {}) {
   return {
@@ -67,3 +72,92 @@ function invokeVoice(handler, context, event, options) {
     }, options);
   });
 }
+
+function invokeHandler(handler, context, event) {
+  return new Promise((resolve, reject) => {
+    handler(context, event, (error, result) => {
+      if (error) reject(error);
+      else resolve(result);
+    });
+  });
+}
+
+function escalationContext(overrides = {}) {
+  const updates = [];
+  return {
+    HANDOFF_TOKEN: "secret-token",
+    FLEX_WORKFLOW_SID: "WW11111111111111111111111111111111",
+    FLEX_WAIT_URL: "",
+    getTwilioClient() {
+      return {
+        calls(callSid) {
+          return {
+            update(args) {
+              updates.push({ callSid, args });
+              return Promise.resolve({ sid: callSid });
+            },
+          };
+        },
+      };
+    },
+    updates,
+    ...overrides,
+  };
+}
+
+test("normalizedSummary uses fallback when summary is blank", () => {
+  assert.equal(
+    normalizedSummary({ summary: "   " }),
+    "The LiveKit agent requested a human handoff.",
+  );
+});
+
+test("taskAttributesForPayload includes Flex handoff context", () => {
+  const attrs = taskAttributesForPayload(
+    {
+      callDirection: "inbound",
+      handoffId: "handoff-1",
+      customerPhone: "+15551230000",
+      intent: "account_access",
+    },
+    "CA11111111111111111111111111111111",
+    "Caller needs help signing in.",
+  );
+
+  assert.equal(attrs.direction, "inbound");
+  assert.equal(attrs.channelType, "voice");
+  assert.equal(attrs.reason, "ai_escalation");
+  assert.equal(attrs.parentCallSid, "CA11111111111111111111111111111111");
+  assert.equal(attrs.handoffId, "handoff-1");
+  assert.equal(attrs.customerPhone, "+15551230000");
+  assert.equal(attrs.intent, "account_access");
+  assert.equal(attrs.summary, "Caller needs help signing in.");
+});
+
+test("handleEscalation rejects invalid bearer token", async () => {
+  const result = await invokeHandler(handleEscalation, escalationContext(), {
+    request: { headers: { authorization: "Bearer wrong" } },
+  });
+
+  assert.equal(result.statusCode, 401);
+  assert.deepEqual(result.body, { error: "unauthorized" });
+});
+
+test("handleEscalation updates parent call with enqueue TwiML", async () => {
+  const context = escalationContext();
+  const result = await invokeHandler(handleEscalation, context, {
+    request: { headers: { authorization: "Bearer secret-token" } },
+    parentCallSid: "CA11111111111111111111111111111111",
+    handoffId: "handoff-1",
+    callDirection: "inbound",
+    customerPhone: "+15551230000",
+    intent: "account_access",
+    summary: "Caller needs help signing in.",
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.body.ok, true);
+  assert.equal(context.updates[0].callSid, "CA11111111111111111111111111111111");
+  assert.match(context.updates[0].args.twiml, /<Enqueue workflowSid="WW11111111111111111111111111111111">/);
+  assert.match(context.updates[0].args.twiml, /Caller needs help signing in\./);
+});
