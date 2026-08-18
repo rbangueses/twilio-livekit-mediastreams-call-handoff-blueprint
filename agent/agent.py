@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Mapping
@@ -54,15 +55,17 @@ def build_escalation_payload(
         "handoffId": attributes.get("handoffId", parent_call_sid),
         "callDirection": attributes.get("callDirection", "inbound"),
         "customerPhone": attributes.get("customerPhone", ""),
+        "handoffRoute": attributes.get("handoffRoute", ""),
         "intent": intent,
         "summary": summary,
         "description": summary,
     }
 
 
-def post_escalation(service_url: str, token: str, payload: dict[str, str], *, path: str) -> dict:
+async def post_escalation(service_url: str, token: str, payload: dict[str, str], *, path: str) -> dict:
     url = f"{service_url.rstrip('/')}/{path.lstrip('/')}"
-    response = requests.post(
+    response = await asyncio.to_thread(
+        requests.post,
         url,
         headers={
             "Authorization": f"Bearer {token}",
@@ -105,7 +108,7 @@ class HandoffAgent(Agent):
                 intent=intent,
                 summary=summary,
             )
-            post_escalation(
+            await post_escalation(
                 os.environ["HANDOFF_SERVICE_URL"],
                 os.environ["HANDOFF_TOKEN"],
                 payload,
