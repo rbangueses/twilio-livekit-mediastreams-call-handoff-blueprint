@@ -1,0 +1,74 @@
+{
+  "description": "LiveKit Media Streams inbound handoff to Flex",
+  "states": [
+    {
+      "name": "Trigger",
+      "type": "trigger",
+      "transitions": [
+        {
+          "event": "incomingCall",
+          "next": "redirect_to_livekit"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "redirect_to_livekit",
+      "type": "add-twiml-redirect",
+      "transitions": [
+        {
+          "event": "return",
+          "next": "send_to_flex"
+        },
+        {
+          "event": "timeout"
+        },
+        {
+          "event": "fail"
+        }
+      ],
+      "properties": {
+        "url": "https://your-functions-service-1234.twil.io/studio_voice",
+        "method": "POST",
+        "timeout": 14400,
+        "offset": {
+          "x": 240,
+          "y": 120
+        }
+      }
+    },
+    {
+      "name": "send_to_flex",
+      "type": "send-to-flex",
+      "transitions": [
+        {
+          "event": "callComplete"
+        },
+        {
+          "event": "failedToEnqueue"
+        },
+        {
+          "event": "callFailure"
+        }
+      ],
+      "properties": {
+        "workflow": "WWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "channel": "TCxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "attributes": "{\"type\":\"inbound\",\"name\":\"{{trigger.call.From}}\",\"from\":\"{{trigger.call.From}}\",\"customerAddress\":\"{{trigger.call.From}}\",\"customerName\":\"{{trigger.call.From}}\",\"channelType\":\"voice\",\"direction\":\"{{trigger.call.Direction}}\",\"reason\":\"ai_escalation\",\"intent\":\"{{widgets.redirect_to_livekit.intent}}\",\"summary\":\"{{widgets.redirect_to_livekit.summary}}\",\"description\":\"{{widgets.redirect_to_livekit.description}}\",\"parentCallSid\":\"{{widgets.redirect_to_livekit.parentCallSid}}\",\"handoffId\":\"{{widgets.redirect_to_livekit.handoffId}}\",\"customerPhone\":\"{{widgets.redirect_to_livekit.customerPhone}}\"}",
+        "offset": {
+          "x": 520,
+          "y": 120
+        }
+      }
+    }
+  ],
+  "initial_state": "Trigger",
+  "flags": {
+    "allow_concurrent_calls": true
+  }
+}

@@ -12,6 +12,10 @@ const {
   normalizedSummary,
   taskAttributesForPayload,
 } = require("../functions/lib/escalation.private");
+const {
+  buildStudioReturnUrl,
+  handleStudioEscalation,
+} = require("../functions/lib/studio-escalation.private");
 
 function baseContext(overrides = {}) {
   return {
@@ -160,4 +164,65 @@ test("handleEscalation updates parent call with enqueue TwiML", async () => {
   assert.equal(context.updates[0].callSid, "CA11111111111111111111111111111111");
   assert.match(context.updates[0].args.twiml, /<Enqueue workflowSid="WW11111111111111111111111111111111">/);
   assert.match(context.updates[0].args.twiml, /Caller needs help signing in\./);
+});
+
+function studioContext(overrides = {}) {
+  const updates = [];
+  return {
+    HANDOFF_TOKEN: "secret-token",
+    STUDIO_FLOW_WEBHOOK_URL: "https://webhooks.twilio.com/v1/Accounts/AC11111111111111111111111111111111/Flows/FW11111111111111111111111111111111",
+    getTwilioClient() {
+      return {
+        calls(callSid) {
+          return {
+            update(args) {
+              updates.push({ callSid, args });
+              return Promise.resolve({ sid: callSid });
+            },
+          };
+        },
+      };
+    },
+    updates,
+    ...overrides,
+  };
+}
+
+test("buildStudioReturnUrl appends FlowEvent return and handoff fields", () => {
+  const url = buildStudioReturnUrl("https://webhooks.twilio.com/v1/Accounts/AC/Flows/FW", {
+    parentCallSid: "CA11111111111111111111111111111111",
+    handoffId: "handoff-1",
+    customerPhone: "+15551230000",
+    intent: "account_access",
+    summary: "Needs help signing in.",
+    description: "Caller tried a code.",
+  });
+
+  const parsed = new URL(url);
+  assert.equal(parsed.searchParams.get("FlowEvent"), "return");
+  assert.equal(parsed.searchParams.get("parentCallSid"), "CA11111111111111111111111111111111");
+  assert.equal(parsed.searchParams.get("handoffId"), "handoff-1");
+  assert.equal(parsed.searchParams.get("customerPhone"), "+15551230000");
+  assert.equal(parsed.searchParams.get("intent"), "account_access");
+  assert.equal(parsed.searchParams.get("summary"), "Needs help signing in.");
+  assert.equal(parsed.searchParams.get("description"), "Caller tried a code.");
+});
+
+test("handleStudioEscalation redirects parent call to Studio return", async () => {
+  const context = studioContext();
+  const result = await invokeHandler(handleStudioEscalation, context, {
+    request: { headers: { authorization: "Bearer secret-token" } },
+    parentCallSid: "CA11111111111111111111111111111111",
+    handoffId: "handoff-1",
+    customerPhone: "+15551230000",
+    intent: "account_access",
+    summary: "Needs help signing in.",
+    description: "Caller tried a code.",
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.body.ok, true);
+  assert.equal(context.updates[0].callSid, "CA11111111111111111111111111111111");
+  assert.match(context.updates[0].args.twiml, /<Redirect method="POST">/);
+  assert.match(context.updates[0].args.twiml, /FlowEvent=return/);
 });
