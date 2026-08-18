@@ -1,0 +1,14 @@
+{
+  "name": "twilio-livekit-mediastreams-handoff-serverless",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.cjs",
+    "deploy": "bash scripts/deploy.sh"
+  },
+  "dependencies": {
+    "@livekit/protocol": "^1.41.0",
+    "livekit-server-sdk": "^2.13.0",
+    "twilio": "^5.3.7"
+  }
+}
