@@ -10,18 +10,23 @@ from dotenv import load_dotenv
 from livekit import rtc
 from livekit.agents import (
     Agent,
+    AgentServer,
     AgentSession,
     JobContext,
+    JobProcess,
     RunContext,
-    WorkerOptions,
+    TurnHandlingOptions,
     cli,
     function_tool,
+    inference,
 )
-from livekit.plugins import cartesia, deepgram, openai, silero
+from livekit.plugins import silero
 
 
 logger = logging.getLogger("livekit-mediastreams-handoff-agent")
 load_dotenv(".env.local")
+
+DEFAULT_AGENT_NAME = "mediastreams-inbound-agent"
 
 INSTRUCTIONS = """You are a concise customer support voice agent.
 
@@ -38,6 +43,14 @@ def find_connector_participant(participants: Mapping[str, rtc.RemoteParticipant]
         if participant.kind == rtc.ParticipantKind.Value("PARTICIPANT_KIND_CONNECTOR"):
             return participant
     return None
+
+
+def connector_attributes(room: rtc.Room, fallback_attributes: Mapping[str, str] | None = None) -> dict[str, str]:
+    participant = find_connector_participant(room.remote_participants)
+    if participant:
+        return dict(participant.attributes)
+
+    return dict(fallback_attributes or {})
 
 
 def build_escalation_payload(
@@ -70,6 +83,10 @@ def escalation_path_for_payload(payload: Mapping[str, str], fallback_path: str) 
     return trusted_paths.get(payload.get("handoffRoute"), fallback_path)
 
 
+def configured_agent_name() -> str:
+    return os.environ.get("LIVEKIT_AGENT_NAME", DEFAULT_AGENT_NAME).strip() or DEFAULT_AGENT_NAME
+
+
 async def post_escalation(service_url: str, token: str, payload: dict[str, str], *, path: str) -> dict:
     url = f"{service_url.rstrip('/')}/{path.lstrip('/')}"
     response = await asyncio.to_thread(
@@ -87,8 +104,9 @@ async def post_escalation(service_url: str, token: str, payload: dict[str, str],
 
 
 class HandoffAgent(Agent):
-    def __init__(self, connector_participant: rtc.RemoteParticipant | None) -> None:
-        self.connector_participant = connector_participant
+    def __init__(self, room: rtc.Room, fallback_attributes: Mapping[str, str]) -> None:
+        self.room = room
+        self.fallback_attributes = fallback_attributes
         super().__init__(instructions=INSTRUCTIONS)
 
     async def on_enter(self) -> None:
@@ -105,14 +123,15 @@ class HandoffAgent(Agent):
             intent: Short routing intent, such as account_access, billing, sales, or support.
             summary: Brief handoff summary for the Flex agent.
         """
-        if not self.connector_participant:
+        attributes = connector_attributes(self.room, self.fallback_attributes)
+        if not attributes.get("parentCallSid"):
             return "I could not find the live phone caller to transfer."
 
         await context.wait_for_playout()
 
         try:
             payload = build_escalation_payload(
-                self.connector_participant.attributes,
+                attributes,
                 intent=intent,
                 summary=summary,
             )
@@ -135,26 +154,39 @@ class HandoffAgent(Agent):
         return "The caller is being connected to a human agent."
 
 
+server = AgentServer()
+
+
+def prewarm(proc: JobProcess) -> None:
+    proc.userdata["vad"] = silero.VAD.load()
+
+
+server.setup_fnc = prewarm
+
+
+@server.rtc_session(agent_name=configured_agent_name())
 async def entrypoint(ctx: JobContext) -> None:
     await ctx.connect()
-    await ctx.wait_for_participant()
-    connector_participant = find_connector_participant(ctx.room.remote_participants)
-
-    if not connector_participant:
-        logger.warning("Expected a connector participant but did not find one.")
+    fallback_attributes = dict(ctx.job.participant.attributes) if ctx.job.participant else {}
 
     session = AgentSession(
-        stt=deepgram.STT(model="nova-3", language="en"),
-        llm=openai.LLM(model="gpt-4o-mini"),
-        tts=cartesia.TTS(),
-        vad=silero.VAD.load(),
+        stt=inference.STT(model="deepgram/nova-3", language="en"),
+        llm=inference.LLM(model="google/gemma-4-31b-it"),
+        tts=inference.TTS(
+            model="cartesia/sonic-3",
+            voice="9626c31c-bec5-4cca-baa8-f8ba9e84c8bc",
+            language="en",
+        ),
+        turn_handling=TurnHandlingOptions(turn_detection=inference.TurnDetector()),
+        vad=ctx.proc.userdata["vad"],
+        preemptive_generation=True,
     )
 
     await session.start(
-        agent=HandoffAgent(connector_participant),
+        agent=HandoffAgent(ctx.room, fallback_attributes),
         room=ctx.room,
     )
 
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    cli.run_app(server)

@@ -1,5 +1,3 @@
-const { normalizedSummary } = require("./escalation.private");
-
 async function handleStudioEscalation(context, event, callback) {
   const response = jsonResponse();
   const authorization = event.request?.headers?.authorization || event.request?.headers?.Authorization;
@@ -108,6 +106,18 @@ function parsePayload(event) {
   return event;
 }
 
+function normalizedSummary(payload) {
+  const fallback = "The LiveKit agent requested a human handoff.";
+  const value =
+    payload.summary ||
+    payload.handoffSummary ||
+    payload.escalationSummary ||
+    payload.conversationSummary ||
+    payload.description;
+
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
 function isBlank(value) {
   return typeof value !== "string" || value.trim() === "";
 }
@@ -116,4 +126,5 @@ module.exports = {
   buildRedirectTwiml,
   buildStudioReturnUrl,
   handleStudioEscalation,
+  normalizedSummary,
 };

@@ -1,2 +1,6 @@
+# Copy to agent/livekit.toml and replace both values for your LiveKit Cloud project.
+[project]
+  subdomain = "your-livekit-subdomain"
+
 [agent]
-id = "inbound-agent-code"
+  id = "CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

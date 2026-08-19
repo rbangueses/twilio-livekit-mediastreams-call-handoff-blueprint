@@ -2,10 +2,24 @@ import asyncio
 import unittest
 from unittest.mock import Mock, patch
 
-from agent.agent import build_escalation_payload, escalation_path_for_payload, post_escalation
+from agent.agent import (
+    build_escalation_payload,
+    configured_agent_name,
+    connector_attributes,
+    escalation_path_for_payload,
+    post_escalation,
+)
 
 
 class EscalationPayloadTests(unittest.TestCase):
+    def test_configured_agent_name_defaults_to_mediastreams_agent(self) -> None:
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(configured_agent_name(), "mediastreams-inbound-agent")
+
+    def test_configured_agent_name_uses_environment_override(self) -> None:
+        with patch.dict("os.environ", {"LIVEKIT_AGENT_NAME": "custom-mediastreams-agent"}):
+            self.assertEqual(configured_agent_name(), "custom-mediastreams-agent")
+
     def test_build_escalation_payload_preserves_handoff_route(self) -> None:
         payload = build_escalation_payload(
             {
@@ -17,6 +31,25 @@ class EscalationPayloadTests(unittest.TestCase):
         )
 
         self.assertEqual(payload["handoffRoute"], "support-tier-two")
+
+    def test_connector_attributes_prefers_active_connector_participant(self) -> None:
+        participant = Mock()
+        participant.kind = 5
+        participant.attributes = {"parentCallSid": "CAactive"}
+        room = Mock()
+        room.remote_participants = {"caller": participant}
+
+        attrs = connector_attributes(room, {"parentCallSid": "CAfallback"})
+
+        self.assertEqual(attrs["parentCallSid"], "CAactive")
+
+    def test_connector_attributes_falls_back_to_job_participant_attributes(self) -> None:
+        room = Mock()
+        room.remote_participants = {}
+
+        attrs = connector_attributes(room, {"parentCallSid": "CAfallback"})
+
+        self.assertEqual(attrs["parentCallSid"], "CAfallback")
 
     def test_post_escalation_posts_from_async_context(self) -> None:
         response = Mock()

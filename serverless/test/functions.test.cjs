@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 global.Twilio = require("twilio");
 
@@ -17,12 +19,21 @@ const {
   handleStudioEscalation,
 } = require("../functions/lib/studio-escalation.private");
 
+test("studio escalation private handler is self-contained for Twilio runtime", () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, "../functions/lib/studio-escalation.private.js"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(source, /require\(["']\.\/escalation\.private["']\)/);
+});
+
 function baseContext(overrides = {}) {
   return {
     LIVEKIT_URL: "wss://example.livekit.cloud",
     LIVEKIT_API_KEY: "key",
     LIVEKIT_API_SECRET: "secret",
-    LIVEKIT_AGENT_NAME: "inbound-agent-code",
+    LIVEKIT_AGENT_NAME: "mediastreams-inbound-agent",
     ...overrides,
   };
 }
@@ -49,7 +60,7 @@ test("buildConnectorRequest uses connector attributes for direct inbound", () =>
   assert.equal(request.participantAttributes.customerPhone, "+15551230000");
   assert.equal(request.participantAttributes.handoffRoute, "direct");
   assert.equal(request.agents.length, 1);
-  assert.equal(request.agents[0].agentName, "inbound-agent-code");
+  assert.equal(request.agents[0].agentName, "mediastreams-inbound-agent");
 });
 
 test("buildStreamTwiml returns bidirectional media stream TwiML", () => {
