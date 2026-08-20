@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Twilio LiveKit Media Streams Call Handoff Overview</title>
+    <style>
+      :root {
+        --ink: #17202a;
+        --muted: #5a6472;
+        --line: #d9e0e8;
+        --soft: #f5f7fa;
+        --paper: #ffffff;
+        --twilio-red: #f22f46;
+        --livekit-blue: #2458d3;
+        --teal: #0d9488;
+        --amber: #b7791f;
+        --shadow: 0 14px 40px rgba(23, 32, 42, 0.09);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.55;
+        background: var(--paper);
+      }
+
+      a {
+        color: #165bd8;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        border-bottom: 1px solid var(--line);
+        background:
+          linear-gradient(135deg, rgba(242, 47, 70, 0.09), transparent 34%),
+          linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%);
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 76px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 760;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        color: #ffffff;
+        background: var(--twilio-red);
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr);
+        gap: 48px;
+        align-items: center;
+        min-height: 668px;
+        padding: 62px 0 72px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--twilio-red);
+        font-size: 13px;
+        font-weight: 760;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 780px;
+        margin: 0;
+        font-size: clamp(42px, 7vw, 74px);
+        font-weight: 700;
+      }
+
+      .hero-copy {
+        max-width: 710px;
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 19px;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 30px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--ink);
+        background: #ffffff;
+        font-weight: 720;
+        box-shadow: 0 3px 10px rgba(23, 32, 42, 0.06);
+      }
+
+      .button.primary {
+        border-color: var(--twilio-red);
+        background: var(--twilio-red);
+        color: #fff;
+      }
+
+      .hero-panel {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .panel-head strong {
+        color: var(--ink);
+      }
+
+      .panel-body {
+        padding: 18px;
+      }
+
+      .section {
+        padding: 72px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .section.alt {
+        background: var(--soft);
+      }
+
+      .section-kicker {
+        margin: 0 0 10px;
+        color: var(--twilio-red);
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(1.9rem, 3vw, 3rem);
+      }
+
+      .section-lede {
+        width: 100%;
+        max-width: none;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 1.05rem;
+        text-align: justify;
+        text-align-last: left;
+        text-wrap: pretty;
+        hyphens: auto;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
+        gap: 44px;
+        align-items: start;
+      }
+
+      .body-copy {
+        display: grid;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .body-copy p {
+        margin: 0;
+        text-align: justify;
+        text-align-last: left;
+        text-wrap: pretty;
+        hyphens: auto;
+      }
+
+      .grid {
+        display: grid;
+        gap: 18px;
+        margin-top: 34px;
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 22px;
+      }
+
+      .card h3 {
+        margin: 0 0 10px;
+        font-size: 1.08rem;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+        text-align: justify;
+        text-align-last: left;
+        text-wrap: pretty;
+        hyphens: auto;
+      }
+
+      .card p {
+        margin: 0;
+      }
+
+      .card p + p {
+        margin-top: 14px;
+      }
+
+      .card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .card li + li {
+        margin-top: 10px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 9px;
+        margin-bottom: 16px;
+        border-radius: 999px;
+        background: #fff1f3;
+        color: #b42335;
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+
+      .badge.blue {
+        background: #eef4ff;
+        color: #2458d3;
+      }
+
+      .badge.teal {
+        background: #ecfdf5;
+        color: #047857;
+      }
+
+      .badge.amber {
+        background: #fffbeb;
+        color: #92400e;
+      }
+
+      .card-token {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        margin-bottom: 18px;
+        border-radius: 8px;
+        color: #ffffff;
+        font-weight: 800;
+      }
+
+      .card-token.twilio {
+        background: var(--twilio-red);
+      }
+
+      .card-token.livekit {
+        background: var(--livekit-blue);
+      }
+
+      .card-token.route {
+        background: var(--teal);
+      }
+
+      .flow-wrap {
+        margin-top: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .flow-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
+      .flow-diagram {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        padding: 24px;
+      }
+
+      .node {
+        position: relative;
+        min-height: 112px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-top: 5px solid var(--twilio-red);
+        border-radius: 8px;
+        background: #fbfcff;
+      }
+
+      .node.livekit {
+        border-top-color: var(--livekit-blue);
+      }
+
+      .node.handoff {
+        border-top-color: var(--amber);
+      }
+
+      .node.routing {
+        border-top-color: var(--teal);
+      }
+
+      .node strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .node span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .node:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 52px;
+        right: -18px;
+        width: 20px;
+        height: 2px;
+        background: var(--line);
+      }
+
+      .paths {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .flow-card {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+
+      .flow-card p {
+        margin: 12px 0 0;
+        color: var(--muted);
+      }
+
+      .route {
+        display: grid;
+        gap: 10px;
+        margin: 18px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .route li {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
+      }
+
+      .route-command {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      code {
+        padding: 0.12em 0.32em;
+        border-radius: 5px;
+        background: #eef2f7;
+        color: #24364b;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 0.92em;
+      }
+
+      .callout {
+        margin-top: 34px;
+        padding: 22px;
+        border-left: 5px solid var(--twilio-red);
+        border-radius: 8px;
+        background: #fff7f8;
+      }
+
+      .callout p {
+        margin: 0;
+        color: #56313a;
+        text-align: justify;
+        text-align-last: left;
+        text-wrap: pretty;
+        hyphens: auto;
+      }
+
+      .callout.blue {
+        border-left-color: var(--livekit-blue);
+        background: #eef4ff;
+      }
+
+      .callout.blue p {
+        color: #1f3a8a;
+      }
+
+      .mini-diagram {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .footer {
+        padding: 34px 0 52px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 980px) {
+        .hero-grid,
+        .split,
+        .grid.three,
+        .grid.two,
+        .flow-diagram,
+        .paths {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-grid {
+          min-height: auto;
+          padding-top: 54px;
+        }
+
+        .node:not(:last-child)::after {
+          display: none;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .shell {
+          width: min(100% - 28px, 1120px);
+        }
+
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 18px 0;
+        }
+
+        .nav-links {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .flow-title {
+          flex-direction: column;
+        }
+
+        .hero-grid {
+          padding: 38px 0 52px;
+        }
+
+        .hero-actions {
+          display: grid;
+        }
+
+        .button {
+          width: 100%;
+        }
+
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="shell">
+        <nav class="nav" aria-label="Main navigation">
+          <div class="brand">
+            <span class="brand-mark">T</span>
+            <span>Twilio + LiveKit Blueprint</span>
+          </div>
+          <div class="nav-links">
+            <a href="#what">What it is</a>
+            <a href="#why">Why it is useful</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#platform">Optional capabilities</a>
+            <a href="#next">Next steps</a>
+          </div>
+        </nav>
+
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow">High Level Overview</div>
+            <h1>Twilio LiveKit Media Streams Call Handoff Blueprint</h1>
+            <p class="hero-copy">
+              This blueprint shows how to let a LiveKit voice agent handle the
+              first part of a phone call over Twilio Media Streams, then hand
+              the live caller back to Twilio routing when the agent needs help,
+              a human, or another destination.
+            </p>
+            <div class="hero-actions">
+              <a class="button primary" href="https://github.com/rbangueses/twilio-livekit-mediastreams-call-handoff-blueprint">Open GitHub Repo</a>
+            </div>
+          </div>
+
+          <div class="hero-panel" aria-label="High-level blueprint diagram">
+            <div class="panel-head">
+              <span><strong>Core idea:</strong> contain, decide, hand off</span>
+              <span>Voice + AI + routing</span>
+            </div>
+            <div class="panel-body">
+              <svg class="mini-diagram" viewBox="0 0 720 520" role="img" aria-label="High-level call handoff flow">
+              <defs>
+                <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+                  <path d="M2,2 L10,6 L2,10 Z" fill="#5a6472" />
+                </marker>
+                <style>
+                  .node { fill: #fff; stroke: #cfd8e3; stroke-width: 2; }
+                  .twilio { fill: #fff7f8; stroke: #f22f46; stroke-width: 2.5; }
+                  .livekit { fill: #eef4ff; stroke: #2458d3; stroke-width: 2.5; }
+                  .route { fill: #ecfdf5; stroke: #0d9488; stroke-width: 2.5; }
+                  .label { fill: #17202a; font: 700 18px system-ui, sans-serif; }
+                  .small { fill: #5a6472; font: 500 13px system-ui, sans-serif; }
+                  .line { fill: none; stroke: #5a6472; stroke-width: 2.2; marker-end: url(#arrow); }
+                  .dash { fill: none; stroke: #5a6472; stroke-width: 2.2; stroke-dasharray: 8 8; marker-end: url(#arrow); }
+                </style>
+              </defs>
+
+              <rect x="58" y="55" width="180" height="96" rx="8" class="twilio" />
+              <text x="148" y="91" text-anchor="middle" class="label">Twilio Voice</text>
+              <text x="148" y="118" text-anchor="middle" class="small">owns call control</text>
+
+              <rect x="420" y="55" width="220" height="96" rx="8" class="livekit" />
+              <text x="530" y="91" text-anchor="middle" class="label">LiveKit Agent</text>
+              <text x="530" y="118" text-anchor="middle" class="small">self-service first</text>
+
+              <rect x="250" y="235" width="220" height="112" rx="8" class="twilio" />
+              <text x="360" y="273" text-anchor="middle" class="label">Parent Call Update</text>
+              <text x="360" y="300" text-anchor="middle" class="small">agent passes summary</text>
+              <text x="360" y="323" text-anchor="middle" class="small">Twilio routes caller</text>
+
+              <rect x="58" y="410" width="180" height="80" rx="8" class="route" />
+              <text x="148" y="443" text-anchor="middle" class="label">Studio</text>
+              <text x="148" y="468" text-anchor="middle" class="small">resume journey</text>
+
+              <rect x="270" y="410" width="180" height="80" rx="8" class="route" />
+              <text x="360" y="443" text-anchor="middle" class="label">TaskRouter</text>
+              <text x="360" y="468" text-anchor="middle" class="small">queue to Flex</text>
+
+              <rect x="482" y="410" width="180" height="80" rx="8" class="route" />
+              <text x="572" y="443" text-anchor="middle" class="label">TwiML Route</text>
+              <text x="572" y="468" text-anchor="middle" class="small">dial, app, conference</text>
+
+              <path d="M238 103 H410" class="line" />
+              <path d="M530 151 C530 210 470 224 434 247" class="dash" />
+              <path d="M360 347 V398" class="line" />
+              <path d="M320 347 C255 365 185 377 156 398" class="line" />
+              <path d="M400 347 C465 365 535 377 564 398" class="line" />
+            </svg>
+          </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section" id="what">
+        <div class="shell">
+          <p class="section-kicker">What It Is</p>
+          <h2>A call handoff pattern built on Twilio Media Streams</h2>
+          <p class="section-lede">
+            The blueprint connects Twilio Programmable Voice to LiveKit using
+            the LiveKit Twilio Connector and <code>&lt;Connect&gt;&lt;Stream&gt;</code>,
+            passes the original Twilio parent call SID into the LiveKit room as
+            connector participant attributes, and gives the LiveKit agent a tool
+            that can update that original call when escalation is needed. The
+            caller stays on the live phone call while Twilio decides the next
+            route, whether the call started inbound directly on a number or
+            inside a Studio Flow.
+          </p>
+
+          <div class="grid three">
+            <div class="card">
+              <span class="badge">Containment</span>
+              <h3>Let AI try first</h3>
+              <p>
+                LiveKit handles the real-time agent experience, including
+                speech, reasoning, and self-service. Twilio stays ready to take
+                the call back when the agent cannot complete the job.
+              </p>
+            </div>
+            <div class="card">
+              <span class="badge blue">Control</span>
+              <h3>Keep routing in Twilio</h3>
+              <p>
+                The handoff updates the original Twilio call resource, so the
+                next destination can be Studio, TaskRouter, Flex, another voice
+                app, a dial target, or a conference.
+              </p>
+            </div>
+            <div class="card">
+              <span class="badge teal">Context</span>
+              <h3>Carry the handoff summary</h3>
+              <p>
+                The agent sends intent, summary, and optional Memory identifiers
+                back to Twilio so a downstream route or human agent can see what
+                happened before escalation.
+              </p>
+            </div>
+          </div>
+
+          <div class="callout blue">
+            <p>
+              This blueprint uses LiveKit Twilio Connector and Twilio Media
+              Streams. For the SIP-based version, see
+              <a href="https://github.com/rbangueses/twilio-livekit-sip-call-handoff-blueprint">twilio-livekit-sip-call-handoff-blueprint</a>.
+              LiveKit Twilio Connector is currently in beta, so treat
+              connector-specific behavior as subject to change.
+            </p>
+          </div>
+
+          <div class="callout">
+            <p>
+              This blueprint is a proof-of-concept reference implementation,
+              not a production drop-in. Treat it as a starting point for the
+              architecture and adapt routing, authentication, prompts,
+              observability, security, and compliance controls to your use case.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="why">
+        <div class="shell">
+          <p class="section-kicker">Why It Is Useful</p>
+          <h2>It separates the AI runtime from the routing decision</h2>
+          <p class="section-lede">
+            Teams often want to experiment with a specialized voice AI provider
+            without rebuilding the rest of their contact center, and without
+            standing up SIP trunks or dispatch rules. Media Streams keeps the
+            transport inside Twilio's existing voice stack: LiveKit runs the
+            agent, while Twilio continues to handle voice numbers, inbound and
+            outbound call control, Studio journeys, TaskRouter queues, Flex
+            tasks, and post-call context.
+          </p>
+
+          <div class="grid three">
+            <div class="card">
+              <span class="card-token twilio">1</span>
+              <h3>Preserve call control</h3>
+              <p>
+                Twilio updates the original live call, so the handoff can return
+                to Studio, enqueue into TaskRouter, or route elsewhere without
+                losing the parent call relationship.
+              </p>
+            </div>
+            <div class="card">
+              <span class="card-token livekit">2</span>
+              <h3>Pass useful context</h3>
+              <p>
+                LiveKit connector participant attributes carry the parent call
+                SID, handoff ID, call direction, caller number, and optional
+                Memory identifiers into the agent session, and back out on
+                escalation.
+              </p>
+            </div>
+            <div class="card">
+              <span class="card-token route">3</span>
+              <h3>Route with Twilio</h3>
+              <p>
+                Use Studio for journey control, Flex for the tested agent
+                experience, TaskRouter for another queue, or custom TwiML for a
+                different destination.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="when">
+        <div class="shell split">
+          <div>
+            <p class="section-kicker">When to use</p>
+            <h2>Use it when escalation is part of the customer journey.</h2>
+          </div>
+          <div class="body-copy">
+            <p>
+              Use this blueprint when the LiveKit AI agent should solve common
+              voice intents first, but needs a controlled fallback for
+              account access, billing, compliance, complex support, or explicit
+              requests for a person, and when you prefer Media Streams over
+              running a SIP trunk.
+            </p>
+            <p>
+              It is especially useful when your Twilio number already starts in
+              Studio, when Flex should receive structured task attributes, when
+              routing logic needs to stay in TaskRouter, or when optional
+              Twilio Memory should give LiveKit prior customer context. The
+              first milestone focuses on inbound direct and inbound Studio;
+              outbound calls started from Twilio or Studio can be added on top
+              once inbound is working end to end.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="how-it-works">
+        <div class="shell">
+          <p class="section-kicker">How It Works</p>
+          <h2>Three routing patterns, one parent-call update</h2>
+          <p class="section-lede">
+            The same LiveKit tool contract can hand the caller back to Studio,
+            TaskRouter, or another TwiML-controlled destination. The difference
+            is the Twilio Function URL and TwiML instruction used after
+            escalation. Media Streams is the transport that carries the audio
+            between Twilio and LiveKit in every pattern.
+          </p>
+
+          <div class="flow-wrap">
+            <div class="flow-title">
+              <span>Shared call lifecycle</span>
+              <span>Twilio Functions + LiveKit Twilio Connector</span>
+            </div>
+            <div class="flow-diagram" aria-label="High-level call flow diagram">
+              <div class="node">
+                <strong>Twilio Voice</strong>
+                <span>Caller reaches a Twilio number, direct or through Studio.</span>
+              </div>
+              <div class="node livekit">
+                <strong>LiveKit agent</strong>
+                <span>Twilio connects the live call over <code>&lt;Connect&gt;&lt;Stream&gt;</code>.</span>
+              </div>
+              <div class="node handoff">
+                <strong>Escalation tool</strong>
+                <span>Agent sends summary and parent call identifiers to Twilio.</span>
+              </div>
+              <div class="node routing">
+                <strong>Twilio routing</strong>
+                <span>Studio, TaskRouter, or custom TwiML receives the caller.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="paths">
+            <article class="flow-card">
+              <h3>Pattern A: Studio return</h3>
+              <p>
+                Best when Studio owns IVR, branching, reporting, or Send to
+                Flex.
+              </p>
+              <ul class="route">
+                <li>
+                  <span class="route-command"><code>/studio_voice</code></span>
+                  <span>Calls <code>ConnectTwilioCall</code> and streams the caller to LiveKit.</span>
+                </li>
+                <li>
+                  <span class="route-command"><code>/studio_escalate</code></span>
+                  <span>Redirects the live call back to the Studio Flow with <code>FlowEvent=return</code>.</span>
+                </li>
+                <li>Studio resumes on the TwiML Redirect return transition.</li>
+                <li>Send to Flex creates the human-agent task.</li>
+              </ul>
+            </article>
+
+            <article class="flow-card">
+              <h3>Pattern B: TaskRouter enqueue</h3>
+              <p>
+                Best when you want the smallest direct handoff to Flex or
+                another TaskRouter-powered contact center.
+              </p>
+              <ul class="route">
+                <li>
+                  <span class="route-command"><code>/voice</code></span>
+                  <span>Calls <code>ConnectTwilioCall</code> and streams the caller to LiveKit.</span>
+                </li>
+                <li>
+                  <span class="route-command"><code>/escalate</code></span>
+                  <span>Updates the parent call.</span>
+                </li>
+                <li>
+                  <span class="route-command"><code>&lt;Enqueue&gt;</code></span>
+                  <span>Twilio returns task attributes.</span>
+                </li>
+                <li>TaskRouter routes the voice task to an agent.</li>
+              </ul>
+            </article>
+
+            <article class="flow-card">
+              <h3>Pattern C: Generic TwiML route</h3>
+              <p>
+                Best when escalation should continue into a custom
+                Programmable Voice app, a phone number, or a conference
+                flow.
+              </p>
+              <ul class="route">
+                <li>
+                  <span class="route-command">
+                    <code>/voice</code><span>or</span><code>/studio_voice</code>
+                  </span>
+                  <span>Streams the caller to LiveKit through the connector.</span>
+                </li>
+                <li>The escalation tool posts summary and call identifiers to Twilio.</li>
+                <li>Your Function updates the parent call with custom TwiML.</li>
+                <li>Twilio continues the live call through your chosen route.</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="platform">
+        <div class="shell">
+          <p class="section-kicker">Optional Platform Layer</p>
+          <h2>Memory and Intelligence can sit on top</h2>
+          <p class="section-lede">
+            Conversation Memory is optional. When enabled, Twilio can resolve a
+            customer profile before dialing LiveKit and pass Memory identifiers
+            into the agent session as connector participant attributes. The
+            agent can then recall relevant prior observations, summaries,
+            preferences, or open issues.
+          </p>
+
+          <div class="grid three">
+            <div class="card">
+              <span class="badge">Orchestrator</span>
+              <h3>Capture conversations</h3>
+              <p>
+                Conversation Orchestrator is the capture and configuration layer
+                that groups voice and messaging interactions into normalized
+                conversations.
+              </p>
+            </div>
+            <div class="card">
+              <span class="badge blue">Memory</span>
+              <h3>Recall customer context</h3>
+              <p>
+                Memory stores and retrieves customer context across sessions and
+                channels, helping the LiveKit agent avoid making callers repeat
+                what already happened.
+              </p>
+            </div>
+            <div class="card">
+              <span class="badge teal">CINTEL</span>
+              <h3>Analyze conversations</h3>
+              <p>
+                Conversation Intelligence is independent from Memory, but it can
+                attach to the same Orchestrator-captured conversations for
+                real-time or post-call analysis.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="section alt" id="next">
+        <div class="shell">
+          <p class="section-kicker">Next Step</p>
+          <h2>Go deeper when you are ready to build</h2>
+          <p class="section-lede">
+            The architecture walkthrough explains the call flow, Function
+            endpoints, LiveKit Twilio Connector configuration, connector
+            participant attributes, Memory overlay, and Flex task attributes.
+            The repository README is the implementation guide.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/rbangueses/twilio-livekit-mediastreams-call-handoff-blueprint">Open GitHub Repo</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell">
+        Twilio LiveKit Media Streams Call Handoff Overview. See the repository
+        README for setup steps and production adaptation notes.
+      </div>
+    </footer>
+  </body>
+</html>
