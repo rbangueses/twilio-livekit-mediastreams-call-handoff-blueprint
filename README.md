@@ -4,7 +4,7 @@ Conversational AI agents need a clean path to escalate to a human when they cann
 
 This repo is a working blueprint for handing an active Twilio phone call from a LiveKit voice agent back to Twilio, then routing that caller to Twilio Flex with context. The core pattern is broader: keep Twilio as the call owner, pass the original parent `CallSid` into LiveKit through the Twilio Connector, let the LiveKit agent decide when to escalate, then update that original Twilio Call resource with the next TwiML instruction.
 
-This blueprint intentionally uses LiveKit Twilio Connector and Twilio Media Streams. It does not use LiveKit SIP trunks, SIP dispatch rules, or SIP participant headers. For the SIP version, use `twilio-livekit-sip-call-handoff-blueprint`.
+This blueprint intentionally uses LiveKit Twilio Connector and Twilio Media Streams. It does not use LiveKit SIP trunks, SIP dispatch rules, or SIP participant headers. For the SIP version, use [twilio-livekit-sip-call-handoff-blueprint](https://github.com/rbangueses/twilio-livekit-sip-call-handoff-blueprint).
 
 Flex is the reference human-agent destination in this repo. Pattern A uses Studio to resume the journey and then Send to Flex. Pattern B sends the caller directly to TaskRouter/Flex with `<Enqueue>`. The same parent-call update pattern can be adapted to another TaskRouter-powered contact center or a custom TwiML destination.
 
@@ -29,8 +29,6 @@ The repo includes two inbound handoff paths. The Studio path has been exercised 
 - [6. How the Patterns Target the Right Call](#6-how-the-patterns-target-the-right-call)
 - [7. Test End to End](#7-test-end-to-end)
 - [8. Display Task Attributes in Flex](#8-display-task-attributes-in-flex)
-- [9. Local Checks](#9-local-checks)
-- [10. Troubleshooting](#10-troubleshooting)
 
 ## 1. Prerequisites
 
@@ -195,8 +193,6 @@ For a clean hosted deployment, create a dedicated hosted agent for this blueprin
 ```text
 LIVEKIT_AGENT_NAME=mediastreams-inbound-agent
 ```
-
-If your LiveKit project has only one hosted-agent slot and you temporarily reuse an existing hosted SIP agent, set `LIVEKIT_AGENT_NAME` to that existing agent name in both `serverless/.env` and the hosted agent secrets. This is useful for one-by-one testing, but it displaces the SIP integration until you redeploy or roll back that hosted agent.
 
 If you use a LiveKit CLI config file, create a local copy from the template and fill in your project values:
 
@@ -377,72 +373,8 @@ The Studio and TaskRouter paths both pass handoff context into the voice task at
 
 For production, decide which attributes should be visible to the human agent, which should be used only for routing, and which should live in an external datastore instead of TaskRouter attributes.
 
-## 9. Local Checks
-
-Run serverless unit tests:
-
-```bash
-cd serverless
-npm test
-cd ..
-```
-
-Run the Python agent tests:
-
-```bash
-agent/.venv/bin/python -m unittest agent.test_agent
-```
-
-From this workspace, the project currently has coverage for:
-
-- `ConnectTwilioCall` request construction.
-- Media Streams TwiML generation.
-- Direct `/escalate` parent-call update.
-- Studio `/studio_escalate` parent-call redirect.
-- The Twilio Runtime packaging regression where `/studio_escalate` must not require `./escalation.private`.
-- Agent connector attribute extraction and handoff route selection.
-
-## 10. Troubleshooting
-
-### Caller hears silence
-
-Check that the hosted agent is running and that `LIVEKIT_AGENT_NAME` matches in both places:
-
-- `serverless/.env`, used by `ConnectTwilioCall` agent dispatch.
-- The hosted agent deployment secrets, used by `@server.rtc_session(agent_name=...)`.
-
-Also confirm the deployed agent starts the `AgentSession` after `ctx.connect()` and does not wait indefinitely for a participant. The bundled agent uses connector attributes from the active room and falls back to job participant attributes.
-
-### Agent says it is transferring, but nothing happens
-
-Check the LiveKit agent logs for an HTTP error from `transfer_to_flex`, then check the Twilio Debugger for the matching Function error.
-
-For Pattern A, the common checks are:
-
-- `/studio_escalate` is deployed in the current Twilio Functions build.
-- `HANDOFF_TOKEN` matches between the agent and Twilio Functions.
-- `STUDIO_FLOW_WEBHOOK_URL` points to the published Studio Flow webhook.
-- The Studio Flow has a `return` transition from `redirect_to_livekit` into Send to Flex.
-- The Send to Flex widget has a valid `WW...` Workflow SID and `TC...` voice Task Channel SID.
-
-For Pattern B, the common checks are:
-
-- `/escalate` is deployed in the current Twilio Functions build.
-- `FLEX_WORKFLOW_SID` is a `WW...` Workflow SID.
-- Flex workers are online and eligible for the configured Workflow.
-
-### Studio does not resume
-
-Confirm `/studio_escalate` updates the original parent `CallSid` with a `<Redirect>` to the Studio Flow webhook and includes `FlowEvent=return`. If the handoff endpoint is accidentally set to `/escalate`, the call can still reach Flex, but Studio will be bypassed.
-
-### SIP integration is affected during testing
-
-This blueprint does not require SIP. If you temporarily reuse the same LiveKit hosted agent slot that another SIP integration uses, that hosted runtime is replaced until you redeploy or roll back the SIP agent. Use a dedicated hosted agent for this Media Streams blueprint when moving beyond one-by-one testing.
-
 ## Deferred
 
 - Outbound calls.
 - Conversation Memory.
 - Custom TwiML routing examples.
-- Published overview page.
-- Flex Task Attributes Viewer documentation.
