@@ -4,6 +4,8 @@ Conversational AI agents need a clean path to escalate to a human when they cann
 
 This repo is a working blueprint for handing an active Twilio phone call from a LiveKit voice agent back to Twilio, then routing that caller to Twilio Flex with context. The core pattern is broader: keep Twilio as the call owner, pass the original parent `CallSid` into LiveKit through the Twilio Connector, let the LiveKit agent decide when to escalate, then update that original Twilio Call resource with the next TwiML instruction.
 
+For a high-level introduction, see the published [overview page](https://rbangueses.github.io/twilio-livekit-mediastreams-call-handoff-blueprint/overview.html).
+
 This blueprint intentionally uses LiveKit Twilio Connector and Twilio Media Streams. It does not use LiveKit SIP trunks, SIP dispatch rules, or SIP participant headers. For the SIP version, use [twilio-livekit-sip-call-handoff-blueprint](https://github.com/rbangueses/twilio-livekit-sip-call-handoff-blueprint).
 
 Flex is the reference human-agent destination in this repo. Pattern A uses Studio to resume the journey and then Send to Flex. Pattern B sends the caller directly to TaskRouter/Flex with `<Enqueue>`. The same parent-call update pattern can be adapted to another TaskRouter-powered contact center or a custom TwiML destination.
